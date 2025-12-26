@@ -1,0 +1,28 @@
+# Ignore heavy bot dependencies - use only webapp/api/requirements.txt
+/requirements.txt
+
+# Ignore bot source code - not needed for webapp
+src/
+data/
+tests/
+scripts/
+
+# Ignore development files
+*.md
+.env
+.env.*
+*.log
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# Ignore documentation
+README.md
+SETUP_GUIDE.md
+PROACTIVE_IMPLEMENTATION_GUIDE.md
+FINAL_LAUNCH_GUIDE.md
+VERCEL_DEPLOY.txt
+ГОТОВО_К_ДЕПЛОЮ.txt

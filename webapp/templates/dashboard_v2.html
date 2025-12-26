@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI Coach Dashboard</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --bg-color: #0a0e27;
+            --card-bg: #1a1f3a;
+            --text-color: #ffffff;
+            --text-secondary: #a0aec0;
+            --success-color: #48bb78;
+            --warning-color: #ed8936;
+            --danger-color: #f56565;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Background animated gradient */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #2d3748 100%);
+            z-index: -2;
+        }
+
+        .bg-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Container */
+        .container {
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+            padding-bottom: 100px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Header with personality selector */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-name {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .settings-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .settings-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Personality Selector */
+        .personality-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .personality-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .personalities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 12px;
+        }
+
+        .personality-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .personality-card:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .personality-card:hover:before {
+            opacity: 1;
+        }
+
+        .personality-card.active {
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .personality-emoji {
+            font-size: 32px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .personality-name {
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .stat-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            animation: fadeInUp 0.6s ease-out 0.4s both;
+            scrollbar-width: none;
+        }
+
+        .tab-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: var(--card-bg);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tab-btn.active {
+            color: white;
+        }
+
+        .tab-btn.active::before {
+            opacity: 1;
+        }
+
+        .tab-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Content Sections */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Goal Cards */
+        .goal-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            border-image: linear-gradient(to bottom, var(--primary-color), var(--secondary-color)) 1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s;
+        }
+
+        .goal-card:active {
+            transform: scale(0.98);
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .goal-title {
+            font-size: 16px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .goal-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .goal-badge.high {
+            background: rgba(245, 101, 101, 0.2);
+            color: #fc8181;
+        }
+
+        .goal-badge.medium {
+            background: rgba(237, 137, 54, 0.2);
+            color: #f6ad55;
+        }
+
+        .goal-badge.low {
+            background: rgba(72, 187, 120, 0.2);
+            color: #68d391;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 4px;
+            transition: width 0.6s ease-out;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .goal-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Message Items */
+        .message-item {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .message-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .message-item.user::before {
+            background: linear-gradient(to bottom, #4299e1, #3182ce);
+        }
+
+        .message-item.assistant::before {
+            background: linear-gradient(to bottom, var(--primary-color), var(--secondary-color));
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .message-time {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Context Items */
+        .context-item {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .context-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .context-icon.goal {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+        }
+
+        .context-icon.struggle {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+
+        .context-icon.win {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .context-content {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Scheduled Items */
+        .scheduled-item {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #f6ad55;
+        }
+
+        .scheduled-time {
+            font-weight: 600;
+            color: #f6ad55;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .scheduled-type {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Loading & Empty States */
+        .loading, .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s;
+        }
+
+        .fab:active {
+            transform: scale(0.9);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding: 12px;
+            }
+
+            .personalities-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-name" id="user-name">Загрузка...</div>
+                </div>
+                <button class="settings-btn" onclick="openSettings()">⚙️</button>
+            </div>
+
+            <!-- Personality Selector -->
+            <div class="personality-selector">
+                <div class="personality-label">Выбери личность коуча:</div>
+                <div class="personalities-grid" id="personalities-grid">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">💬</span>
+                <div class="stat-value" id="stat-messages">-</div>
+                <div class="stat-label">Сообщений</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🎯</span>
+                <div class="stat-value" id="stat-goals">-</div>
+                <div class="stat-label">Целей</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🔥</span>
+                <div class="stat-value" id="stat-frequency">-</div>
+                <div class="stat-label">В день</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">📈</span>
+                <div class="stat-value" id="stat-response">-</div>
+                <div class="stat-label">Отклик</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('goals')"><span>🎯 Цели</span></button>
+            <button class="tab-btn" onclick="switchTab('messages')"><span>💬 История</span></button>
+            <button class="tab-btn" onclick="switchTab('context')"><span>📝 Контекст</span></button>
+            <button class="tab-btn" onclick="switchTab('scheduled')"><span>⏰ Расписание</span></button>
+        </div>
+
+        <!-- Goals Tab -->
+        <div id="tab-goals" class="tab-content active">
+            <h2 class="section-title">🎯 Твои цели</h2>
+            <div id="goals-list">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Загрузка целей...
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div id="tab-messages" class="tab-content">
+            <h2 class="section-title">💬 История сообщений</h2>
+            <div id="messages-list">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Загрузка истории...
+                </div>
+            </div>
+        </div>
+
+        <!-- Context Tab -->
+        <div id="tab-context" class="tab-content">
+            <h2 class="section-title">📝 Извлечённый контекст</h2>
+            <div id="context-list">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Загрузка контекста...
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduled Tab -->
+        <div id="tab-scheduled" class="tab-content">
+            <h2 class="section-title">⏰ Запланированные сообщения</h2>
+            <div id="scheduled-list">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Загрузка расписания...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" onclick="addGoal()">➕</button>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+
+        // Set theme colors
+        tg.setHeaderColor('#0a0e27');
+        tg.setBackgroundColor('#0a0e27');
+
+        let userId = null;
+        let currentPersonality = null;
+
+        // Get user from Telegram
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            userId = tg.initDataUnsafe.user.id;
+            document.getElementById('user-name').textContent = tg.initDataUnsafe.user.first_name || 'Пользователь';
+
+            // Update avatar with first letter
+            const firstLetter = (tg.initDataUnsafe.user.first_name || '?')[0].toUpperCase();
+            document.querySelector('.user-avatar').textContent = firstLetter;
+        } else {
+            // For testing
+            userId = prompt('Enter Telegram ID:', '12345') || '12345';
+            document.getElementById('user-name').textContent = 'Test User';
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Find the button that was clicked by matching the tab name
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.querySelector('span').textContent.includes(
+                    tabName === 'goals' ? 'Цели' :
+                    tabName === 'messages' ? 'История' :
+                    tabName === 'context' ? 'Контекст' :
+                    tabName === 'scheduled' ? 'Расписание' : ''
+                )) {
+                    btn.classList.add('active');
+                }
+            });
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // Load personalities
+        async function loadPersonalities() {
+            try {
+                const response = await fetch(`/api/personalities`);
+                const data = await response.json();
+
+                const grid = document.getElementById('personalities-grid');
+                grid.innerHTML = data.personalities.map(p => `
+                    <div class="personality-card ${p.id === currentPersonality ? 'active' : ''}"
+                         onclick="selectPersonality(${p.id})"
+                         data-id="${p.id}">
+                        <span class="personality-emoji">${p.avatar_emoji}</span>
+                        <div class="personality-name">${p.display_name}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading personalities:', error);
+            }
+        }
+
+        // Select personality
+        async function selectPersonality(personalityId) {
+            try {
+                const response = await fetch(`/api/user/${userId}/personality`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ personality_id: personalityId })
+                });
+
+                if (response.ok) {
+                    currentPersonality = personalityId;
+
+                    // Update UI
+                    document.querySelectorAll('.personality-card').forEach(card => {
+                        card.classList.toggle('active', card.dataset.id == personalityId);
+                    });
+
+                    // Show feedback
+                    tg.HapticFeedback.impactOccurred('medium');
+
+                    // Reload data with new personality
+                    loadUserData();
+                }
+            } catch (error) {
+                console.error('Error selecting personality:', error);
+            }
+        }
+
+        // Load user data
+        async function loadUserData() {
+            try {
+                const response = await fetch(`/api/user/${userId}`);
+                const data = await response.json();
+
+                currentPersonality = data.user.active_personality_id;
+
+                document.getElementById('stat-messages').textContent = data.stats.total_messages || 0;
+                document.getElementById('stat-goals').textContent = data.stats.active_goals || 0;
+                document.getElementById('stat-frequency').textContent = data.user.messages_per_day || 0;
+                document.getElementById('stat-response').textContent = Math.round((data.stats.response_rate || 0) * 100) + '%';
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // Load goals
+        async function loadGoals() {
+            try {
+                const response = await fetch(`/api/goals/${userId}`);
+                const data = await response.json();
+
+                const container = document.getElementById('goals-list');
+                if (data.goals.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🎯</div>
+                            <div>Пока нет целей</div>
+                            <div style="font-size: 12px; margin-top: 8px;">Нажми ➕ чтобы добавить</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.goals.map(goal => `
+                    <div class="goal-card">
+                        <div class="goal-header">
+                            <div class="goal-title">${goal.title}</div>
+                            <div class="goal-badge ${goal.priority}">${goal.priority}</div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${goal.progress || 0}%"></div>
+                        </div>
+                        <div class="goal-meta">
+                            <span>📈 ${goal.progress || 0}%</span>
+                            <span>${new Date(goal.created_at).toLocaleDateString('ru-RU')}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading goals:', error);
+            }
+        }
+
+        // Load messages
+        async function loadMessages() {
+            try {
+                const response = await fetch(`/api/messages/${userId}?limit=20`);
+                const data = await response.json();
+
+                const container = document.getElementById('messages-list');
+                if (data.messages.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">💬</div>
+                            <div>Пока нет сообщений</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.messages.reverse().map(msg => `
+                    <div class="message-item ${msg.role}">
+                        <div class="message-header">
+                            <div class="message-sender">
+                                ${msg.role === 'user' ? '👤 Ты' : '🤖 ' + (msg.role === 'assistant' ? 'Коуч' : 'Система')}
+                            </div>
+                            <div class="message-time">${new Date(msg.created_at).toLocaleString('ru-RU')}</div>
+                        </div>
+                        <div class="message-content">${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Load context
+        async function loadContext() {
+            try {
+                const response = await fetch(`/api/context/${userId}`);
+                const data = await response.json();
+
+                const container = document.getElementById('context-list');
+                if (data.context.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📝</div>
+                            <div>Контекст не извлечён</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const iconMap = {
+                    'goal': '🎯',
+                    'struggle': '😓',
+                    'win': '🎉'
+                };
+
+                container.innerHTML = data.context.map(ctx => `
+                    <div class="context-item">
+                        <div class="context-icon ${ctx.context_type}">
+                            ${iconMap[ctx.context_type] || '📌'}
+                        </div>
+                        <div class="context-content">${ctx.content}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading context:', error);
+            }
+        }
+
+        // Load scheduled messages
+        async function loadScheduled() {
+            try {
+                const response = await fetch(`/api/scheduled/${userId}`);
+                const data = await response.json();
+
+                const container = document.getElementById('scheduled-list');
+                if (data.scheduled.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">⏰</div>
+                            <div>Нет запланированных сообщений</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.scheduled.map(msg => `
+                    <div class="scheduled-item">
+                        <div class="scheduled-time">
+                            ⏰ ${new Date(msg.scheduled_time).toLocaleString('ru-RU')}
+                        </div>
+                        <div class="scheduled-type">
+                            Тип: ${msg.message_type} • Приоритет: ${msg.priority}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading scheduled:', error);
+            }
+        }
+
+        // Settings
+        function openSettings() {
+            tg.showAlert('Настройки откроются в следующей версии!');
+        }
+
+        // Add goal
+        function addGoal() {
+            tg.showPopup({
+                title: 'Новая цель',
+                message: 'Используй команду /goal в боте чтобы добавить новую цель',
+                buttons: [{ type: 'ok' }]
+            });
+        }
+
+        // Initialize
+        loadPersonalities();
+        loadUserData();
+        loadGoals();
+        loadMessages();
+        loadContext();
+        loadScheduled();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadUserData();
+            loadGoals();
+            loadScheduled();
+        }, 30000);
+    </script>
+</body>
+</html>

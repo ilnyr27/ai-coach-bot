@@ -9,8 +9,8 @@ from psycopg2.extras import RealDictCursor
 app = Flask(__name__, template_folder='../templates')
 CORS(app)
 
-# PostgreSQL connection - Direct connection
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:Pofudu92pofudu92@db.fpackkversmdotxrsscv.supabase.co:5432/postgres?sslmode=require&connect_timeout=5')
+# PostgreSQL connection from environment variable
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 # Mock data for fallback
 MOCK_PERSONALITIES = [

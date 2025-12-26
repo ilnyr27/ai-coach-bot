@@ -124,9 +124,14 @@ if __name__ == "__main__":
     # Configuration
     SQLITE_PATH = "./data/bot.db"
 
-    # Get PostgreSQL URL from environment or hardcode for migration
-    # Using direct connection with SSL
-    POSTGRES_URL = os.getenv('DATABASE_URL') or "postgresql://postgres:Pofudu92pofudu92@db.fpackkversmdotxrsscv.supabase.co:5432/postgres?sslmode=require"
+    # Get PostgreSQL URL from environment variable
+    # Set DATABASE_URL in your environment before running this script
+    POSTGRES_URL = os.getenv('DATABASE_URL')
+
+    if not POSTGRES_URL:
+        print("❌ DATABASE_URL environment variable not set!")
+        print("   Set it with: export DATABASE_URL='postgresql://...'")
+        sys.exit(1)
 
     if not os.path.exists(SQLITE_PATH):
         print(f"❌ SQLite database not found at: {SQLITE_PATH}")

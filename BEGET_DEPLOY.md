@@ -56,10 +56,15 @@ nano .env
 
 **Вставь в .env (Shift+Insert):**
 ```
-TELEGRAM_BOT_TOKEN=8471169770:AAEY2w9gGS1eh-x-XlVZlHuiulaf2wXgEgs
-DEEPSEEK_API_KEY=sk-fafd2548b0e74dec951e77a7197a085a
-DATABASE_URL=postgresql://postgres:Pofudu92pofudu92@db.fpackkversmdotxrsscv.supabase.co:5432/postgres?sslmode=require&connect_timeout=3
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+DATABASE_URL=postgresql://postgres:your_password@your_host.supabase.co:5432/postgres?sslmode=require&connect_timeout=3
 ```
+
+**Где взять токены:**
+- `TELEGRAM_BOT_TOKEN`: BotFather в Telegram
+- `DEEPSEEK_API_KEY`: https://platform.deepseek.com/api_keys
+- `DATABASE_URL`: https://supabase.com (Database Settings)
 
 Сохрани: `Ctrl+X`, `Y`, `Enter`
 

@@ -74,9 +74,13 @@ git push
 3. Добавь переменные:
 
 ```
-TELEGRAM_BOT_TOKEN=8471169770:AAEY2w9gGS1eh-x-XlVZlHuiulaf2wXgEgs
-DEEPSEEK_API_KEY=sk-fafd2548b0e74dec951e77a7197a085a
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
+
+**Где взять:**
+- `TELEGRAM_BOT_TOKEN`: BotFather в Telegram
+- `DEEPSEEK_API_KEY`: https://platform.deepseek.com/api_keys
 
 **НЕ НУЖНО добавлять DATABASE_URL** - Railway автоматически подключит PostgreSQL!
 

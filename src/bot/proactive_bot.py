@@ -24,8 +24,20 @@ from dotenv import load_dotenv
 import logging
 
 from src.database.db_manager_postgres import DatabaseManager
-from src.rag.embedder import EmbeddingGenerator
-from src.rag.search import RAGSearchEngine
+
+# Optional RAG imports (not available in minimal Railway deployment)
+try:
+    from src.rag.embedder import EmbeddingGenerator
+    from src.rag.search import RAGSearchEngine
+    RAG_AVAILABLE = True
+    logger.info("✅ RAG modules available")
+except ImportError as e:
+    logger.warning(f"⚠️ RAG modules not available: {e}")
+    logger.warning("   Bot will work without RAG features")
+    RAG_AVAILABLE = False
+    EmbeddingGenerator = None
+    RAGSearchEngine = None
+
 from src.ai.deepseek_client import DeepSeekClient, JAMES_CLEAR_PROMPT
 from src.ai.proactive_messages import ProactiveMessageGenerator
 from src.scheduler.proactive_scheduler import ProactiveScheduler
@@ -55,13 +67,18 @@ class ProactiveJamesClearBot:
         logger.info("🔧 Initializing database...")
         self.db = DatabaseManager()  # Uses DATABASE_URL from .env
 
-        # Initialize RAG
-        logger.info("🔧 Initializing RAG system...")
-        self.embedder = EmbeddingGenerator()
-        self.search_engine = RAGSearchEngine(
-            persist_directory="./data/chroma_db",
-            collection_name="james_clear_atomic_habits"
-        )
+        # Initialize RAG (optional)
+        if RAG_AVAILABLE:
+            logger.info("🔧 Initializing RAG system...")
+            self.embedder = EmbeddingGenerator()
+            self.search_engine = RAGSearchEngine(
+                persist_directory="./data/chroma_db",
+                collection_name="james_clear_atomic_habits"
+            )
+        else:
+            logger.info("⏭️ Skipping RAG initialization (dependencies not installed)")
+            self.embedder = None
+            self.search_engine = None
 
         # Initialize AI
         self.ai_client = DeepSeekClient()

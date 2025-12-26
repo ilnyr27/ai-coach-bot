@@ -479,11 +479,12 @@ class ProactiveJamesClearBot:
             await self.settings_command(update, context)
 
         # ===== CANCEL BUTTON =====
-        elif text == "❌ Отмена":
+        elif text == "❌ Отмена" or "отмена" in text.lower():
             telegram_id = update.effective_user.id
             # Очистить состояние если было
             if telegram_id in self.user_states:
-                del self.user_states[telegram_id]
+                state = self.user_states.pop(telegram_id)
+                logger.info(f"Cancelled state '{state}' for user {telegram_id}")
 
             await update.message.reply_text(
                 "❌ Отменено.\n\nВозвращаюсь в меню целей.",
@@ -605,6 +606,22 @@ class ProactiveJamesClearBot:
 
         # Extract context from message
         extracted = self.context_extractor.extract_all(user_message)
+
+        # Check for goal progress updates
+        progress_update = self.context_extractor.extract_progress_update(user_message)
+        if progress_update:
+            activity, increase = progress_update
+            try:
+                # Get user's active goals
+                goals = self.db.get_active_goals(telegram_id)
+                if goals:
+                    # Update progress of the first active goal (можно улучшить - найти наиболее релевантную цель)
+                    goal = goals[0]
+                    new_progress = min(100, goal['progress'] + increase)
+                    self.db.update_goal_progress(goal['id'], new_progress)
+                    logger.info(f"✅ Updated goal '{goal['title']}' progress: {goal['progress']}% → {new_progress}%")
+            except Exception as e:
+                logger.warning(f"DB unavailable for update_goal_progress: {e}")
 
         # Save extracted goals (с обработкой ошибок)
         try:

@@ -105,6 +105,42 @@ class ContextExtractor:
 
         return any(keyword in text_lower for keyword in struggle_keywords)
 
+    @staticmethod
+    def extract_progress_update(text: str) -> Optional[Tuple[str, int]]:
+        """
+        Extract goal progress update from text.
+
+        Returns:
+            Tuple of (goal_keyword, progress_percentage) or None
+
+        Examples:
+            "Сегодня пробежал 5 км" -> increase progress
+            "Выполнил задачу" -> increase progress
+            "Не получилось бегать" -> no change or decrease
+        """
+        text_lower = text.lower()
+
+        # Progress indicators (positive)
+        positive_patterns = [
+            (r'(пробежал|бегал|сделал|выполнил|прочитал|закончил)', 15),  # +15%
+            (r'(продолжаю|делаю|занимаюсь)', 10),  # +10%
+            (r'(попробовал|начал|приступил)', 5),  # +5%
+        ]
+
+        for pattern, increase in positive_patterns:
+            if re.search(pattern, text_lower):
+                # Try to extract what they did
+                for goal_pattern in ContextExtractor.WIN_PATTERNS:
+                    match = re.search(goal_pattern, text_lower)
+                    if match:
+                        activity = match.group(1).strip()
+                        return (activity, increase)
+
+                # Default return
+                return ("прогресс", increase)
+
+        return None
+
 
 if __name__ == "__main__":
     # Test context extractor

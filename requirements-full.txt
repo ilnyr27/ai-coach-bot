@@ -1,0 +1,29 @@
+# AI & ML
+openai>=1.0.0  # For DeepSeek API (compatible)
+sentence-transformers>=2.2.0  # For embeddings
+chromadb>=0.4.0  # Vector database
+
+# Book parsing
+ebooklib>=0.18  # EPUB parser
+beautifulsoup4>=4.12.0  # HTML parsing
+lxml>=4.9.0  # XML parsing
+
+# Telegram bot
+python-telegram-bot>=20.0  # Telegram bot framework
+python-dotenv>=1.0.0  # Environment variables
+
+# Web App
+flask>=3.0.0  # Web server for Mini App
+flask-cors>=4.0.0  # CORS support
+
+# Database
+psycopg2-binary>=2.9.0  # PostgreSQL adapter
+
+# Utilities
+tqdm>=4.66.0  # Progress bars
+nltk>=3.8.0  # Text processing (optional)
+apscheduler>=3.10.0  # Task scheduling for proactive messages
+
+# Development
+pytest>=7.4.0
+black>=23.0.0

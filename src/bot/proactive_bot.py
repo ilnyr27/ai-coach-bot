@@ -23,6 +23,16 @@ from telegram.ext import (
 from dotenv import load_dotenv
 import logging
 
+# Load environment
+load_dotenv()
+
+# Configure logging BEFORE imports that use logger
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 from src.database.db_manager_postgres import DatabaseManager
 
 # Optional RAG imports (not available in minimal Railway deployment)
@@ -42,16 +52,6 @@ from src.ai.deepseek_client import DeepSeekClient, JAMES_CLEAR_PROMPT
 from src.ai.proactive_messages import ProactiveMessageGenerator
 from src.scheduler.proactive_scheduler import ProactiveScheduler
 from src.utils.context_extractor import ContextExtractor
-
-# Load environment
-load_dotenv()
-
-# Configure logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
 
 
 class ProactiveJamesClearBot:

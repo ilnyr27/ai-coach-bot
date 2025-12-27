@@ -125,10 +125,15 @@ def get_user_data(telegram_id):
                 cur.execute("SELECT COUNT(*) as total FROM goals WHERE user_id = %s AND status = 'active'", (user_id,))
                 active_goals = cur.fetchone()['total']
 
+                # Calculate real response rate (user messages / total messages)
+                cur.execute("SELECT COUNT(*) as total FROM messages WHERE user_id = %s AND role = 'user'", (user_id,))
+                user_messages = cur.fetchone()['total']
+                response_rate = (user_messages / total_messages) if total_messages > 0 else 0
+
                 stats = {
                     'total_messages': total_messages,
                     'active_goals': active_goals,
-                    'response_rate': 0.85
+                    'response_rate': response_rate
                 }
 
             return jsonify({'user': user, 'stats': stats})
@@ -261,6 +266,68 @@ def get_scheduled(telegram_id):
             conn.close()
     else:
         return jsonify({'scheduled': [], 'mock': True})
+
+@app.route('/api/goals/add', methods=['POST'])
+def add_goal():
+    """Add new goal for user."""
+    data = request.get_json()
+    telegram_id = data.get('telegram_id')
+    title = data.get('title')
+    priority = data.get('priority', 'medium')
+
+    if not telegram_id or not title:
+        return jsonify({'error': 'telegram_id and title required'}), 400
+
+    conn = get_db()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                # Get or create user
+                cur.execute("SELECT user_id FROM users WHERE telegram_id = %s", (telegram_id,))
+                user_row = cur.fetchone()
+
+                if not user_row:
+                    cur.execute(
+                        "INSERT INTO users (telegram_id, username, first_name) VALUES (%s, %s, %s) RETURNING user_id",
+                        (telegram_id, f'user_{telegram_id}', 'User')
+                    )
+                    user_id = cur.fetchone()['user_id']
+                else:
+                    user_id = user_row['user_id']
+
+                # Add goal
+                cur.execute(
+                    """INSERT INTO goals (user_id, title, priority, status, progress)
+                       VALUES (%s, %s, %s, 'active', 0) RETURNING id""",
+                    (user_id, title, priority)
+                )
+                goal_id = cur.fetchone()['id']
+                conn.commit()
+
+            return jsonify({'success': True, 'goal_id': goal_id})
+        finally:
+            conn.close()
+    else:
+        return jsonify({'error': 'Database unavailable'}), 503
+
+@app.route('/api/goals/<int:goal_id>/delete', methods=['POST', 'DELETE'])
+def delete_goal(goal_id):
+    """Delete goal (soft delete)."""
+    conn = get_db()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE goals SET status = 'deleted', updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+                    (goal_id,)
+                )
+                conn.commit()
+
+            return jsonify({'success': True})
+        finally:
+            conn.close()
+    else:
+        return jsonify({'error': 'Database unavailable'}), 503
 
 # For local development
 if __name__ == '__main__':

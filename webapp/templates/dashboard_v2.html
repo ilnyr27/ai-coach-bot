@@ -431,6 +431,25 @@
             color: var(--text-secondary);
         }
 
+        .delete-btn {
+            background: rgba(245, 101, 101, 0.2);
+            border: none;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 8px;
+        }
+
+        .delete-btn:hover {
+            background: rgba(245, 101, 101, 0.3);
+        }
+
+        .delete-btn:active {
+            transform: scale(0.95);
+        }
+
         /* Message Items */
         .message-item {
             background: var(--card-bg);
@@ -845,8 +864,9 @@
                     <div class="goal-card">
                         <div class="goal-header">
                             <div class="goal-title">${goal.title}</div>
-                            <div class="goal-badge ${goal.priority}">${goal.priority}</div>
+                            <button class="delete-btn" onclick="deleteGoal(${goal.id})">🗑️</button>
                         </div>
+                        <div class="goal-badge ${goal.priority}">${goal.priority}</div>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${goal.progress || 0}%"></div>
                         </div>
@@ -968,12 +988,61 @@
         }
 
         // Add goal
-        function addGoal() {
-            tg.showPopup({
-                title: 'Новая цель',
-                message: 'Используй команду /goal в боте чтобы добавить новую цель',
-                buttons: [{ type: 'ok' }]
-            });
+        async function addGoal() {
+            const goalTitle = prompt('Введи название цели:');
+            if (!goalTitle || goalTitle.trim() === '') {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/goals/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        title: goalTitle.trim(),
+                        priority: 'medium'
+                    })
+                });
+
+                if (response.ok) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    tg.showAlert('Цель добавлена!');
+                    loadGoals(); // Reload goals list
+                    loadUserData(); // Update stats
+                } else {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Ошибка добавления цели');
+                }
+            } catch (error) {
+                console.error('Error adding goal:', error);
+                tg.showAlert('Ошибка соединения');
+            }
+        }
+
+        // Delete goal
+        async function deleteGoal(goalId) {
+            if (!confirm('Удалить эту цель?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/goals/${goalId}/delete`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    loadGoals(); // Reload goals list
+                    loadUserData(); // Update stats
+                } else {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Ошибка удаления');
+                }
+            } catch (error) {
+                console.error('Error deleting goal:', error);
+                tg.showAlert('Ошибка соединения');
+            }
         }
 
         // Initialize

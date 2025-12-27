@@ -223,6 +223,32 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    def delete_goal(self, goal_id: int):
+        """Soft delete goal by setting status to 'deleted'."""
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE goals SET status = 'deleted', updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+                    (goal_id,)
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def complete_goal(self, goal_id: int):
+        """Mark goal as completed."""
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE goals SET status = 'completed', progress = 100, updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+                    (goal_id,)
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
     # ==================== CONTEXT ====================
 
     def add_context(self, telegram_id: int, context_type: str, content: str, priority: str = 'medium') -> Optional[int]:

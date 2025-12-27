@@ -113,9 +113,8 @@ class ProactiveJamesClearBot:
     def get_goals_menu(self):
         """Get goals submenu keyboard."""
         keyboard = [
-            [KeyboardButton("➕ Добавить цель")],
-            [KeyboardButton("📋 Мои цели")],
-            [KeyboardButton("✅ Отметить выполненной")],
+            [KeyboardButton("➕ Добавить цель"), KeyboardButton("📋 Мои цели")],
+            [KeyboardButton("✅ Отметить выполненной"), KeyboardButton("🗑️ Удалить цель")],
             [KeyboardButton("⬅️ Главное меню")]
         ]
         return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -438,11 +437,54 @@ class ProactiveJamesClearBot:
             )
 
         elif text == "✅ Отметить выполненной":
+            telegram_id = update.effective_user.id
+            goals = self.db.get_active_goals(telegram_id)
+
+            if not goals:
+                await update.message.reply_text(
+                    "У тебя нет активных целей.\n\nДобавь цель чтобы отметить её выполненной!",
+                    reply_markup=self.get_goals_menu()
+                )
+                return
+
+            # Show goals with numbers for selection
+            goals_text = "✅ **Выбери цель для завершения:**\n\n"
+            for idx, goal in enumerate(goals, 1):
+                goals_text += f"{idx}. {goal['title']} ({goal['progress']}%)\n"
+            goals_text += "\nОтправь номер цели (например: 1)"
+
+            # Save state
+            self.user_states[telegram_id] = 'awaiting_goal_complete'
+
             await update.message.reply_text(
-                "✅ **Отметить цель выполненной**\n\n"
-                "Эта функция в разработке.\n"
-                "Скоро ты сможешь отмечать цели как выполненные!",
-                reply_markup=self.get_goals_menu(),
+                goals_text,
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Отмена")]], resize_keyboard=True),
+                parse_mode='Markdown'
+            )
+
+        elif text == "🗑️ Удалить цель":
+            telegram_id = update.effective_user.id
+            goals = self.db.get_active_goals(telegram_id)
+
+            if not goals:
+                await update.message.reply_text(
+                    "У тебя нет активных целей.\n\nНечего удалять!",
+                    reply_markup=self.get_goals_menu()
+                )
+                return
+
+            # Show goals with numbers for selection
+            goals_text = "🗑️ **Выбери цель для удаления:**\n\n"
+            for idx, goal in enumerate(goals, 1):
+                goals_text += f"{idx}. {goal['title']} ({goal['progress']}%)\n"
+            goals_text += "\nОтправь номер цели (например: 1)"
+
+            # Save state
+            self.user_states[telegram_id] = 'awaiting_goal_delete'
+
+            await update.message.reply_text(
+                goals_text,
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Отмена")]], resize_keyboard=True),
                 parse_mode='Markdown'
             )
 
@@ -601,6 +643,65 @@ class ProactiveJamesClearBot:
                     "Она будет сохранена когда подключение восстановится.",
                     reply_markup=self.get_goals_menu(),
                     parse_mode='Markdown'
+                )
+            return
+
+        # Проверить если пользователь в режиме удаления цели
+        if telegram_id in self.user_states and self.user_states[telegram_id] == 'awaiting_goal_delete':
+            try:
+                goal_num = int(user_message.strip())
+                goals = self.db.get_active_goals(telegram_id)
+
+                if 1 <= goal_num <= len(goals):
+                    goal_to_delete = goals[goal_num - 1]
+                    self.db.delete_goal(goal_to_delete['id'])
+
+                    del self.user_states[telegram_id]
+
+                    await update.message.reply_text(
+                        f"🗑️ Цель удалена:\n**{goal_to_delete['title']}**",
+                        reply_markup=self.get_goals_menu(),
+                        parse_mode='Markdown'
+                    )
+                else:
+                    await update.message.reply_text(
+                        f"❌ Неверный номер. Выбери число от 1 до {len(goals)}",
+                        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Отмена")]], resize_keyboard=True)
+                    )
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Отправь номер цели (например: 1)",
+                    reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Отмена")]], resize_keyboard=True)
+                )
+            return
+
+        # Проверить если пользователь в режиме завершения цели
+        if telegram_id in self.user_states and self.user_states[telegram_id] == 'awaiting_goal_complete':
+            try:
+                goal_num = int(user_message.strip())
+                goals = self.db.get_active_goals(telegram_id)
+
+                if 1 <= goal_num <= len(goals):
+                    goal_to_complete = goals[goal_num - 1]
+                    self.db.complete_goal(goal_to_complete['id'])
+
+                    del self.user_states[telegram_id]
+
+                    await update.message.reply_text(
+                        f"✅ Поздравляю! Цель выполнена:\n**{goal_to_complete['title']}**\n\n"
+                        "🎉 Отличная работа! Продолжай в том же духе!",
+                        reply_markup=self.get_goals_menu(),
+                        parse_mode='Markdown'
+                    )
+                else:
+                    await update.message.reply_text(
+                        f"❌ Неверный номер. Выбери число от 1 до {len(goals)}",
+                        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Отмена")]], resize_keyboard=True)
+                    )
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Отправь номер цели (например: 1)",
+                    reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Отмена")]], resize_keyboard=True)
                 )
             return
 

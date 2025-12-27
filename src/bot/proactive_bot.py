@@ -607,21 +607,35 @@ class ProactiveJamesClearBot:
         # Extract context from message
         extracted = self.context_extractor.extract_all(user_message)
 
-        # Check for goal progress updates
-        progress_update = self.context_extractor.extract_progress_update(user_message)
-        if progress_update:
-            activity, increase = progress_update
+        # Check for goal progress updates (PRIORITY 1: numerical data)
+        absolute_progress = self.context_extractor.extract_progress_percentage(user_message)
+        if absolute_progress is not None:
             try:
                 # Get user's active goals
                 goals = self.db.get_active_goals(telegram_id)
                 if goals:
-                    # Update progress of the first active goal (можно улучшить - найти наиболее релевантную цель)
+                    # Set absolute progress for the first active goal
                     goal = goals[0]
-                    new_progress = min(100, goal['progress'] + increase)
-                    self.db.update_goal_progress(goal['id'], new_progress)
-                    logger.info(f"✅ Updated goal '{goal['title']}' progress: {goal['progress']}% → {new_progress}%")
+                    self.db.update_goal_progress(goal['id'], absolute_progress)
+                    logger.info(f"✅ Set goal '{goal['title']}' progress: {goal['progress']}% → {absolute_progress}% (calculated from numbers)")
             except Exception as e:
                 logger.warning(f"DB unavailable for update_goal_progress: {e}")
+        else:
+            # PRIORITY 2: keyword-based incremental progress
+            progress_update = self.context_extractor.extract_progress_update(user_message)
+            if progress_update:
+                activity, increase = progress_update
+                try:
+                    # Get user's active goals
+                    goals = self.db.get_active_goals(telegram_id)
+                    if goals:
+                        # Increase progress of the first active goal
+                        goal = goals[0]
+                        new_progress = min(100, goal['progress'] + increase)
+                        self.db.update_goal_progress(goal['id'], new_progress)
+                        logger.info(f"✅ Updated goal '{goal['title']}' progress: {goal['progress']}% → {new_progress}% (+{increase}% from keywords)")
+                except Exception as e:
+                    logger.warning(f"DB unavailable for update_goal_progress: {e}")
 
         # Save extracted goals (с обработкой ошибок)
         try:

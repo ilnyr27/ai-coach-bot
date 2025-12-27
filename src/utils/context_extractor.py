@@ -106,9 +106,77 @@ class ContextExtractor:
         return any(keyword in text_lower for keyword in struggle_keywords)
 
     @staticmethod
+    def extract_progress_percentage(text: str) -> Optional[int]:
+        """
+        Extract absolute progress percentage from numerical data in text.
+
+        Returns:
+            Progress percentage (0-100) or None
+
+        Examples:
+            "просмотрел 17 из 30 видео" -> 56
+            "осталось 13 из 30" -> 56
+            "прошел 3 блок из 3, осталось 13 из 30" -> 85 (complex case)
+        """
+        text_lower = text.lower()
+
+        # PRIORITY 1: Multi-stage progress "блок X из Y, осталось/сделал A из B"
+        # Match both "блок 1 из 3" and "прохожу 3 блок из 3"
+        block_pattern = r'(?:блок|модуль|этап|глава|раздел)\s*(\d+)\s*из\s*(\d+)|(?:\w+\s+)?(\d+)\s+(?:блок|модуль|этап|глава|раздел)\s*из\s*(\d+)'
+        block_match = re.search(block_pattern, text_lower)
+
+        if block_match:
+            # Handle two pattern alternatives (group 1-2 or group 3-4)
+            current_block = int(block_match.group(1) or block_match.group(3))
+            total_blocks = int(block_match.group(2) or block_match.group(4))
+
+            # Check for sub-progress: "осталось X из Y" OR "сделал/прошел X из Y"
+            remaining_match = re.search(r'осталось?\s*(\d+)(?:\s+\w+)?\s+из\s+(\d+)', text_lower)
+            completed_match = re.search(r'(?:сделал|прошел|выполнил|просмотрел)\s*(\d+)\s*из\s*(\d+)', text_lower)
+
+            if remaining_match:
+                remaining = int(remaining_match.group(1))
+                total_in_block = int(remaining_match.group(2))
+                completed_in_block = total_in_block - remaining
+                current_block_progress = completed_in_block / total_in_block if total_in_block > 0 else 0
+            elif completed_match:
+                completed_in_block = int(completed_match.group(1))
+                total_in_block = int(completed_match.group(2))
+                current_block_progress = completed_in_block / total_in_block if total_in_block > 0 else 0
+            else:
+                # Just block number, assume it's the completion percentage
+                return min(100, int((current_block / total_blocks) * 100))
+
+            # Calculate: (completed blocks + progress in current block) / total blocks
+            completed_blocks = current_block - 1
+            overall_progress = (completed_blocks + current_block_progress) / total_blocks
+            return min(100, int(overall_progress * 100))
+
+        # PRIORITY 2: Simple "осталось X из Y"
+        remaining_pattern = r'осталось?\s*(\d+)(?:\s+\w+)?\s+из\s+(\d+)'
+        remaining_match = re.search(remaining_pattern, text_lower)
+        if remaining_match:
+            remaining = int(remaining_match.group(1))
+            total = int(remaining_match.group(2))
+            if total > 0:
+                completed = total - remaining
+                return min(100, int((completed / total) * 100))
+
+        # PRIORITY 3: Simple "X из Y" (completed X out of Y)
+        completed_pattern = r'(?:просмотрел|прошел|сделал|прочитал|выполнил)?\s*(\d+)\s*из\s*(\d+)'
+        completed_match = re.search(completed_pattern, text_lower)
+        if completed_match:
+            completed = int(completed_match.group(1))
+            total = int(completed_match.group(2))
+            if total > 0:
+                return min(100, int((completed / total) * 100))
+
+        return None
+
+    @staticmethod
     def extract_progress_update(text: str) -> Optional[Tuple[str, int]]:
         """
-        Extract goal progress update from text.
+        Extract goal progress update from text (legacy method - uses fixed increments).
 
         Returns:
             Tuple of (goal_keyword, progress_percentage) or None
@@ -116,7 +184,6 @@ class ContextExtractor:
         Examples:
             "Сегодня пробежал 5 км" -> increase progress
             "Выполнил задачу" -> increase progress
-            "Не получилось бегать" -> no change or decrease
         """
         text_lower = text.lower()
 

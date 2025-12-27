@@ -171,8 +171,8 @@ def get_goals(telegram_id):
                 user_id = user_row['user_id']
 
                 cur.execute(
-                    """SELECT * FROM goals WHERE user_id = %s
-                       ORDER BY status ASC, priority DESC, created_at DESC""",
+                    """SELECT * FROM goals WHERE user_id = %s AND status = 'active'
+                       ORDER BY priority DESC, created_at DESC""",
                     (user_id,)
                 )
                 goals = [dict(row) for row in cur.fetchall()]

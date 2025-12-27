@@ -23,7 +23,11 @@ class ContextExtractor:
         r"не\s+могу\s+(.+?)(?:[.!?]|$)",
         r"проблема\s+(.+?)(?:[.!?]|$)",
         r"сложно\s+(.+?)(?:[.!?]|$)",
+        r"тяжело\s+(.+?)(?:[.!?]|$)",
+        r"трудно\s+(.+?)(?:[.!?]|$)",
         r"никак\s+не\s+(.+?)(?:[.!?]|$)",
+        r"не\s+получается\s+(.+?)(?:[.!?]|$)",
+        r"никак\s+не\s+могу\s+(.+?)(?:[.!?]|$)",
     ]
 
     # Patterns for wins
@@ -33,6 +37,22 @@ class ContextExtractor:
         r"удалось\s+(.+?)(?:[.!?]|$)",
         r"добился\s+(.+?)(?:[.!?]|$)",
         r"выполнил\s+(.+?)(?:[.!?]|$)",
+        r"встал\s+(.+?)(?:[.!?]|$)",
+        r"пробежал\s+(.+?)(?:[.!?]|$)",
+        r"прочитал\s+(.+?)(?:[.!?]|$)",
+        r"закончил\s+(.+?)(?:[.!?]|$)",
+        r"завершил\s+(.+?)(?:[.!?]|$)",
+        r"сегодня\s+(.+?)(?:[.!?]|$)",
+    ]
+
+    # Patterns for ongoing activities (progress context)
+    PROGRESS_PATTERNS = [
+        r"сейчас\s+(.+?)(?:[.!?]|$)",
+        r"прохожу\s+(.+?)(?:[.!?]|$)",
+        r"занимаюсь\s+(.+?)(?:[.!?]|$)",
+        r"читаю\s+(.+?)(?:[.!?]|$)",
+        r"изучаю\s+(.+?)(?:[.!?]|$)",
+        r"работаю\s+над\s+(.+?)(?:[.!?]|$)",
     ]
 
     @staticmethod
@@ -79,12 +99,27 @@ class ContextExtractor:
         return wins
 
     @staticmethod
+    def extract_progress(text: str) -> List[str]:
+        """Extract ongoing activities/progress."""
+        progress = []
+
+        for pattern in ContextExtractor.PROGRESS_PATTERNS:
+            matches = re.findall(pattern, text.lower(), re.IGNORECASE)
+            for match in matches:
+                prog = match.strip()
+                if len(prog) > 5 and len(prog) < 200:
+                    progress.append(prog)
+
+        return progress
+
+    @staticmethod
     def extract_all(text: str) -> dict:
         """Extract all context from text."""
         return {
             'goals': ContextExtractor.extract_goals(text),
             'struggles': ContextExtractor.extract_struggles(text),
-            'wins': ContextExtractor.extract_wins(text)
+            'wins': ContextExtractor.extract_wins(text),
+            'progress': ContextExtractor.extract_progress(text)
         }
 
     @staticmethod

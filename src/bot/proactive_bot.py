@@ -759,6 +759,13 @@ class ProactiveJamesClearBot:
         except Exception as e:
             logger.warning(f"DB unavailable for add_context (wins): {e}")
 
+        # Save progress/ongoing activities (с обработкой ошибок)
+        try:
+            for prog in extracted.get('progress', []):
+                self.db.add_context(telegram_id, 'progress', prog)
+        except Exception as e:
+            logger.warning(f"DB unavailable for add_context (progress): {e}")
+
         # Show typing
         await update.message.chat.send_action(action="typing")
 
